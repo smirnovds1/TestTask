@@ -21,13 +21,17 @@ QVariant AddressBookModel::headerData(int section, Qt::Orientation orientation, 
 int AddressBookModel::rowCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent)
+    if (parent.isValid())
+        return 0;
     return container.size();
 }
 
 int AddressBookModel::columnCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent)
-    return 5;
+    if (parent.isValid())
+        return 0;
+    return Person::columns.size();
 }
 
 QVariant AddressBookModel::data(const QModelIndex &index, int role) const
