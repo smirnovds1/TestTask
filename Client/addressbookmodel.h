@@ -8,6 +8,7 @@
 #include <QHostAddress>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QMetaEnum>
 #include <QTcpSocket>
 #include <QTimer>
 
@@ -38,17 +39,14 @@ signals:
     void socketSpeedChanged(const QString &speed);
 
 private slots:
-    void socketTimerTimeout();
     void socketSpeedTimerTimeout();
-    void socketConnected();
-    void socketDisconnected();
+    void socketStateChanged(QAbstractSocket::SocketState state);
     void socketReadyRead();
     void writeToSocket(const QJsonDocument &json);
 
 private:
     QVector<Person> container;
 
-    QTimer socketTimer;
     QTcpSocket socket;
     QString address;
     QString port;

@@ -6,13 +6,9 @@ AddressBookModel::AddressBookModel(QObject *parent) : QAbstractTableModel(parent
     //    container.append({"surname2", "name2", "patronymic2", "sex2", "phone2"});
     //    container.append({"surname3", "name3", "patronymic3", "sex3", "phone3"});
 
-    connect(&socket, &QTcpSocket::connected, this, &AddressBookModel::socketConnected);
-    connect(&socket, &QTcpSocket::disconnected, this, &AddressBookModel::socketDisconnected);
     connect(&socket, &QTcpSocket::readyRead, this, &AddressBookModel::socketReadyRead);
-
-    socketTimer.setInterval(1000);
-    connect(&socketTimer, &QTimer::timeout, this, &AddressBookModel::socketTimerTimeout);
-    QTimer::singleShot(0, this, &AddressBookModel::socketDisconnected);
+    connect(&socket, &QTcpSocket::stateChanged, this, &AddressBookModel::socketStateChanged);
+    QTimer::singleShot(0, this, [this]() { this->socketStateChanged(QTcpSocket::SocketState::UnconnectedState); });
 
     connect(&socketSpeedTimer, &QTimer::timeout, this, &AddressBookModel::socketSpeedTimerTimeout);
     QTimer::singleShot(0, this, &AddressBookModel::socketSpeedTimerTimeout);
@@ -150,12 +146,6 @@ void AddressBookModel::writeToSocket(const QJsonDocument &json)
     }
 }
 
-void AddressBookModel::socketTimerTimeout()
-{
-    if (socket.state() == QTcpSocket::UnconnectedState)
-        socket.connectToHost(address, port.toUInt());
-}
-
 void AddressBookModel::socketSpeedTimerTimeout()
 {
     emit socketSpeedChanged(QString("in: %1 B/sec out: %2 B/sec").arg(socketBytesReceived).arg(socketBytesSent));
@@ -163,17 +153,28 @@ void AddressBookModel::socketSpeedTimerTimeout()
     socketBytesSent     = 0;
 }
 
-void AddressBookModel::socketConnected()
+void AddressBookModel::socketStateChanged(QAbstractSocket::SocketState state)
 {
-    emit socketStatusChanged("Connected");
-    socketTimer.stop();
-    socketSync();
-}
-
-void AddressBookModel::socketDisconnected()
-{
-    emit socketStatusChanged("Disconnected");
-    socketTimer.start();
+    emit socketStatusChanged(QMetaEnum::fromType<QAbstractSocket::SocketState>().valueToKey(state));
+    switch (state)
+    {
+        case QAbstractSocket::UnconnectedState:
+            socket.connectToHost(address, port.toUInt());
+            break;
+        case QAbstractSocket::HostLookupState:
+            break;
+        case QAbstractSocket::ConnectingState:
+            break;
+        case QAbstractSocket::ConnectedState:
+            socketSync();
+            break;
+        case QAbstractSocket::BoundState:
+            break;
+        case QAbstractSocket::ListeningState:
+            break;
+        case QAbstractSocket::ClosingState:
+            break;
+    }
 }
 
 void AddressBookModel::socketReadyRead()
