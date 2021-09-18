@@ -207,7 +207,7 @@ void AddressBookModel::socketReadyRead()
                     for (auto it = incomingData.cbegin(); it != incomingData.cend(); ++it)
                     {
                         QModelIndex modelIndex = createIndex(index, Person::fieldNameToColumnIndex(it.key()));
-                        person.setValueByName(it.key(), it.value().toString());
+                        person.setValueByName(it.key(), it.value());
                         emit dataChanged(modelIndex, modelIndex, {Qt::DisplayRole});
                     }
                     container.replace(index, person);

@@ -2,11 +2,18 @@
 #define PERSON_H
 
 #include  <QVariantMap>
+#include <QDataStream>
 
 struct Person
 {
+    enum class Sex : uint
+    {
+        Male,
+        Female
+    };
+
     Person() = default;
-    Person(const QString &surname, const QString &name, const QString &patronymic, const QString &sex, const QString &phone)
+    Person(const QString &surname, const QString &name, const QString &patronymic, const Sex &sex, const QString &phone)
     : surname(surname), name(name), patronymic(patronymic), sex(sex), phone(phone)
     {
     }
@@ -17,7 +24,7 @@ struct Person
 
     const QVariantMap toVariantMap() const
     {
-        return {{"surname", surname}, {"name", name}, {"patronymic", patronymic}, {"sex", sex}, {"phone", phone}};
+        return {{"surname", surname}, {"name", name}, {"patronymic", patronymic}, {"sex", static_cast<int>(sex)}, {"phone", phone}};
     }
 
     void modify(const QVariantMap &data)
@@ -29,7 +36,7 @@ struct Person
         if (data.contains("patronymic"))
             patronymic = data["patronymic"].toString();
         if (data.contains("sex"))
-            sex = data["sex"].toString();
+            sex = static_cast<Sex>(data["sex"].toUInt());
         if (data.contains("phone"))
             phone = data["phone"].toString();
     }
@@ -59,41 +66,42 @@ struct Person
             default:return QString();
         }
     }
-    void setValueByName(const QString &field, const QString &value)
+    void setValueByName(const QString &field, const QVariant &value)
     {
         if (field == "surname")
-            surname = value;
+            surname = value.toString();
         if (field == "name")
-            name = value;
+            name = value.toString();
         if (field == "patronymic")
-            patronymic = value;
+            patronymic = value.toString();
         if (field == "sex")
-            sex = value;
+            sex = static_cast<Sex>(value.toUInt());
         if (field == "phone")
-            phone = value;
+            phone = value.toString();
     }
-    const QString &getValueByColumnIndex(int column) const
+    const QVariant getValueByColumnIndex(int column) const
     {
         switch (column)
         {
             case 0: return surname;
             case 1: return name;
             case 2: return patronymic;
-            case 3: return sex;
+            case 3: return static_cast<uint>(sex);
             case 4: return phone;
         }
+        return QVariant();
     }
 
     QString surname    = "";
     QString name       = "";
     QString patronymic = "";
-    QString sex        = "";
+    Sex sex        = Sex::Male;
     QString phone      = "";
 };
 
 inline QDataStream &operator<<(QDataStream &stream, const Person &person)
 {
-    return stream << person.surname << person.name << person.patronymic << person.sex << person.phone;
+    return stream << person.surname << person.name << person.patronymic << static_cast<quint8>(person.sex) << person.phone;
 }
 
 inline QDataStream &operator>>(QDataStream &stream, Person &person)
