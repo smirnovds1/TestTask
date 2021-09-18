@@ -5,10 +5,18 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 {
     ui->setupUi(this);
 
-    model = new AddressBookModel(this);
-    connect(model, &AddressBookModel::socketStatusChanged, &socketStatus, &QLabel::setText);
-    connect(model, &AddressBookModel::socketSpeedChanged, &socketSpeed, &QLabel::setText);
-    connect(settings, &Settings::addressOrPortChanged, model, &AddressBookModel::addressOrPortChanged);
+    model        = new AddressBookModel(this);
+    socketWorker = new SocketWorker(this);
+    connect(model, &AddressBookModel::socketAddRow, socketWorker, &SocketWorker::socketAddRow);
+    connect(model, &AddressBookModel::socketModifyRow, socketWorker, &SocketWorker::socketModifyRow);
+    connect(model, &AddressBookModel::socketRemoveRow, socketWorker, &SocketWorker::socketRemoveRow);
+    connect(socketWorker, &SocketWorker::modelClear, model, &AddressBookModel::modelClear);
+    connect(socketWorker, &SocketWorker::modelAddRow, model, &AddressBookModel::modelAddRow);
+    connect(socketWorker, &SocketWorker::modelModifyRow, model, &AddressBookModel::modelModifyRow);
+    connect(socketWorker, &SocketWorker::modelRemoveRow, model, &AddressBookModel::modelRemoveRow);
+    connect(socketWorker, &SocketWorker::socketStatusChanged, &socketStatus, &QLabel::setText);
+    connect(socketWorker, &SocketWorker::socketSpeedChanged, &socketSpeed, &QLabel::setText);
+    connect(settings, &Settings::addressOrPortChanged, socketWorker, &SocketWorker::addressOrPortChanged);
     ui->tableView->setModel(model);
 
     ui->toolBar->addAction("Pushback Person", this, &MainWindow::pushBackRow);
@@ -59,7 +67,7 @@ void MainWindow::deleteCurrentRow()
 
 void MainWindow::sync()
 {
-    model->socketSync();
+    socketWorker->socketSync();
 }
 
 void MainWindow::showSettings()

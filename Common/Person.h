@@ -1,7 +1,7 @@
 #ifndef PERSON_H
 #define PERSON_H
 
-#include  <QVariantMap>
+#include <QVariantMap>
 #include <QDataStream>
 
 struct Person
@@ -11,6 +11,7 @@ struct Person
         Male,
         Female
     };
+    inline static const QVector<QString> columns =  {"surname", "name", "patronymic", "sex", "phone"};
 
     Person() = default;
     Person(const QString &surname, const QString &name, const QString &patronymic, const Sex &sex, const QString &phone)
@@ -24,21 +25,13 @@ struct Person
 
     const QVariantMap toVariantMap() const
     {
-        return {{"surname", surname}, {"name", name}, {"patronymic", patronymic}, {"sex", static_cast<int>(sex)}, {"phone", phone}};
+        return {{"surname", surname}, {"name", name}, {"patronymic", patronymic}, {"sex", static_cast<uint>(sex)}, {"phone", phone}};
     }
 
     void modify(const QVariantMap &data)
     {
-        if (data.contains("surname"))
-            surname = data["surname"].toString();
-        if (data.contains("name"))
-            name = data["name"].toString();
-        if (data.contains("patronymic"))
-            patronymic = data["patronymic"].toString();
-        if (data.contains("sex"))
-            sex = static_cast<Sex>(data["sex"].toUInt());
-        if (data.contains("phone"))
-            phone = data["phone"].toString();
+        for (auto it = data.cbegin(); it != data.end(); ++it)
+            setValueByName(it.key(), it.value());
     }
     static int fieldNameToColumnIndex(const QString &field)
     {
@@ -78,6 +71,22 @@ struct Person
             sex = static_cast<Sex>(value.toUInt());
         if (field == "phone")
             phone = value.toString();
+    }
+    void setValueByColumn(int index, const QVariant &value)
+    {
+        switch (index)
+        {
+        case 0: surname = value.toString();
+            break;
+        case 1: name = value.toString();
+            break;
+        case 2: patronymic = value.toString();
+            break;
+        case 3: sex = static_cast<Sex>(value.toUInt());
+            break;
+        case 4: phone = value.toString();
+            break;
+        }
     }
     const QVariant getValueByColumnIndex(int column) const
     {

@@ -12,12 +12,14 @@ SOURCES += \
     addressbookmodel.cpp \
     main.cpp \
     mainwindow.cpp \
-    settings.cpp
+    settings.cpp \
+    socketworker.cpp
 
 HEADERS += \
     addressbookmodel.h \
     mainwindow.h \
-    settings.h
+    settings.h \
+    socketworker.h
 
 FORMS += \
     mainwindow.ui \

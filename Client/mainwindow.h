@@ -7,6 +7,7 @@
 
 #include "addressbookmodel.h"
 #include "settings.h"
+#include "socketworker.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -41,5 +42,6 @@ private:
     QLabel socketSpeed;
 
     AddressBookModel *model;
+    SocketWorker *socketWorker;
 };
 #endif // MAINWINDOW_H
