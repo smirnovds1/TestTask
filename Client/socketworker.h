@@ -27,6 +27,7 @@ public slots:
 signals:
     void socketStatusChanged(const QString &status);
     void socketSpeedChanged(const QString &speed);
+    void errorHappened(const QString &error);
 
     void modelClear();
     void modelAddRow(int index, const Person &person);

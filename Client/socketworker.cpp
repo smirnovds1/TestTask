@@ -71,9 +71,11 @@ void SocketWorker::writeToSocket(const QJsonDocument &json)
 {
     if (socket.isWritable())
     {
-        QByteArray data = json.toJson(QJsonDocument::Compact) + "\n";
-        socketBytesSent += data.size();
-        socket.write(data);
+        QByteArray data     = json.toJson(QJsonDocument::Compact) + "\n";
+        qint64 bytesWritten = socket.write(data);
+        socketBytesSent += bytesWritten;
+        if (bytesWritten != data.size())
+            emit errorHappened(QString("SocketWriteError: %1 out of %2 bytes written").arg(bytesWritten).arg(data.size()));
     }
 }
 
