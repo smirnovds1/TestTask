@@ -18,6 +18,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(socketWorker, &SocketWorker::socketSpeedChanged, &socketSpeed, &QLabel::setText);
     connect(settings, &Settings::addressOrPortChanged, socketWorker, &SocketWorker::addressOrPortChanged);
     ui->tableView->setModel(model);
+    connect(ui->tableView, &QTableView::clicked, this, &MainWindow::tableViewClicked);
 
     ui->toolBar->addAction("AddRow", this, &MainWindow::addRow);
     ui->toolBar->addAction("DeleteRow", this, &MainWindow::deleteCurrentRow);
@@ -67,4 +68,19 @@ void MainWindow::sync()
 void MainWindow::showSettings()
 {
     settings->show();
+}
+
+void MainWindow::tableViewClicked(const QModelIndex &index)
+{
+    if (index.column() == 3)
+    {
+        if (model->data(index, Qt::DisplayRole).toString() == " ")
+            model->setData(index, static_cast<int>(Person::Sex::Male));
+        else if (model->data(index, Qt::DisplayRole).toString() == "♂")
+            model->setData(index, static_cast<int>(Person::Sex::Female));
+        else if (model->data(index, Qt::DisplayRole).toString() == "♀")
+            model->setData(index, static_cast<int>(Person::Sex::Undefined));
+        else
+            model->setData(index, static_cast<int>(Person::Sex::Undefined));
+    }
 }

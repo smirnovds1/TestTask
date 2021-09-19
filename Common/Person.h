@@ -6,10 +6,11 @@
 
 struct Person
 {
-    enum class Sex : uint
+    enum class Sex : int32_t
     {
-        Male,
-        Female
+        Undefined = 0x20,   // " "
+        Male      = 0x2642, // "♂"
+        Female    = 0x2640  // "♀"
     };
     inline static const QVector<QString> columns = {"surname", "name", "patronymic", "sex", "phone"};
 
@@ -76,7 +77,7 @@ struct Person
         if (field == "patronymic")
             return patronymic;
         if (field == "sex")
-            return static_cast<uint>(sex);
+            return QString(QChar(static_cast<int>(sex)));
         if (field == "phone")
             return phone;
         return QVariant();
@@ -92,7 +93,7 @@ struct Person
             case 2:
                 return patronymic;
             case 3:
-                return static_cast<uint>(sex);
+                return QString(QChar(static_cast<int>(sex)));
             case 4:
                 return phone;
         }
@@ -102,7 +103,7 @@ struct Person
     QString surname    = "";
     QString name       = "";
     QString patronymic = "";
-    Sex sex            = Sex::Male;
+    Sex sex            = Sex::Undefined;
     QString phone      = "";
 };
 

@@ -32,6 +32,7 @@ private slots:
     void deleteCurrentRow();
     void sync();
     void showSettings();
+    void tableViewClicked(const QModelIndex &index);
 
 private:
     Ui::MainWindow *ui;
