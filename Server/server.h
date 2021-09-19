@@ -5,13 +5,13 @@
 #include <QDebug>
 #include <QFile>
 #include <QObject>
-#include <QSettings>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <mutex>
 
 #include "JSONProtocol.h"
-#include "Person.h"
+#include "localsettingsstorage.h"
+#include "memorystorage.h"
 
 class Server : public QObject
 {
@@ -29,17 +29,15 @@ private:
     void removeRow(const QString &uuid);
     void syncSocket(QTcpSocket *socket);
     void writeToAllSockets(const QByteArray &data);
-    Person *readFromLocalDB(const QString &uuid);
-    void localDBModifyRow(const QString &uuid, const QVariantHash &value);
-    void localDBRemoveRow(const QString &uuid);
 
 private:
     QTcpServer server;
     std::map<qintptr, QTcpSocket *> connectedSockets;
 
     std::mutex mutex;
-    QHash<QString, Person *> container;
-    QSettings *localDB;
+
+    LocalSettingsStorage localSettingsStorage;
+    MemoryStorage memoryStorage;
 };
 
 #endif // SERVER_H
