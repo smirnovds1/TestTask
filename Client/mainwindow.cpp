@@ -19,8 +19,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(settings, &Settings::addressOrPortChanged, socketWorker, &SocketWorker::addressOrPortChanged);
     ui->tableView->setModel(model);
 
-    ui->toolBar->addAction("Pushback Person", this, &MainWindow::pushBackRow);
-    ui->toolBar->addAction("Pushfront Person", this, &MainWindow::pushFrontRow);
+    ui->toolBar->addAction("AddRow", this, &MainWindow::addRow);
     ui->toolBar->addAction("DeleteRow", this, &MainWindow::deleteCurrentRow);
     ui->toolBar->addAction("Sync", this, &MainWindow::sync);
     QWidget *spacer = new QWidget(this);
@@ -45,17 +44,12 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
             deleteCurrentRow();
             break;
         case Qt::Key_Insert:
-            pushBackRow();
+            addRow();
             break;
     }
 }
 
-void MainWindow::pushBackRow()
-{
-    model->insertRows(model->rowCount(), 1);
-}
-
-void MainWindow::pushFrontRow()
+void MainWindow::addRow()
 {
     model->insertRows(0, 1);
 }

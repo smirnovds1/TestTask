@@ -4,14 +4,14 @@
 #include <QDataStream>
 #include <QDebug>
 #include <QFile>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QObject>
+#include <QSettings>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <mutex>
 
-#include "../Common/Person.h"
+#include "JSONProtocol.h"
+#include "Person.h"
 
 class Server : public QObject
 {
@@ -24,18 +24,22 @@ private slots:
     void serverNewConnection();
 
 private:
-    void addData(int index, const QJsonObject &data);
-    void modifyData(int index, const QJsonObject &data);
-    void removeData(int index);
+    void addRow();
+    void modifyRow(const QString &uuid, const QVariantHash &value);
+    void removeRow(const QString &uuid);
     void syncSocket(QTcpSocket *socket);
-    void writeToAllSockets(const QString &command, int index, const QJsonObject &data);
+    void writeToAllSockets(const QByteArray &data);
+    Person *readFromLocalDB(const QString &uuid);
+    void localDBModifyRow(const QString &uuid, const QVariantHash &value);
+    void localDBRemoveRow(const QString &uuid);
 
 private:
     QTcpServer server;
     std::map<qintptr, QTcpSocket *> connectedSockets;
 
     std::mutex mutex;
-    QVector<Person> container;
+    QHash<QString, Person *> container;
+    QSettings *localDB;
 };
 
 #endif // SERVER_H

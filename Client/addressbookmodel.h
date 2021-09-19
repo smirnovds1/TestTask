@@ -3,8 +3,9 @@
 
 #include <QAbstractTableModel>
 #include <QDebug>
+#include <QHash>
 
-#include "../Common/Person.h"
+#include "Person.h"
 
 class AddressBookModel : public QAbstractTableModel
 {
@@ -23,17 +24,18 @@ public:
     bool removeRows(int position, int rows, const QModelIndex &index = QModelIndex()) override;
 
     void modelClear();
-    void modelAddRow(int index, const Person &person);
-    void modelModifyRow(int index, const QVariantMap &value);
-    void modelRemoveRow(int index);
+    void modelAddRow(const QString &uuid, const QVariantHash &value);
+    void modelModifyRow(const QString &uuid, const QVariantHash &value);
+    void modelRemoveRow(const QString &uuid);
 
 signals:
-    void socketModifyRow(int row, int column, const QVariant &value);
+    void socketModifyRow(const QString &uuid, int column, const QVariant &value);
     void socketAddRow(int row);
-    void socketRemoveRow(int row);
+    void socketRemoveRow(const QString &uuid);
 
 private:
-    QVector<Person> container;
+    QHash<QString, Person *> container;
+    QVector<QString> containerIndex;
 };
 
 #endif // ADDRESSBOOKMODEL_H

@@ -13,7 +13,7 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     settings.cpp \
-    socketworker.cpp
+    socketworker.cpp \
 
 HEADERS += \
     addressbookmodel.h \
@@ -29,3 +29,5 @@ FORMS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+include(../Common/Common.pri)

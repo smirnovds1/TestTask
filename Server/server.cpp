@@ -3,10 +3,13 @@
 Server::Server(quint16 port)
 {
     // get data from local file
-    QFile file("server.db");
-    file.open(QFile::ReadWrite);
-    QDataStream dataStream(&file);
-    dataStream >> container;
+    localDB = new QSettings("server.ini", QSettings::IniFormat, this);
+    for (QString uuid : localDB->childGroups())
+        container.insert(uuid, readFromLocalDB(uuid));
+    //    QFile file("server.db");
+    //    file.open(QFile::ReadWrite);
+    //    QDataStream dataStream(&file);
+    //    dataStream >> container;
 
     // open up server
     if (server.listen(QHostAddress::Any, port))
@@ -21,11 +24,11 @@ Server::~Server()
 {
     qDebug() << __PRETTY_FUNCTION__;
     std::lock_guard<std::mutex> lock(mutex);
-    QFile file("server.db");
-    file.open(QFile::WriteOnly);
-    QDataStream dataStream(&file);
-    dataStream << container;
-    file.close();
+    //    QFile file("server.db");
+    //    file.open(QFile::WriteOnly);
+    //    QDataStream dataStream(&file);
+    //    dataStream << container;
+    //    file.close();
 }
 
 void Server::serverNewConnection()
@@ -39,35 +42,16 @@ void Server::serverNewConnection()
             {
                 while (socket->canReadLine())
                 {
-                    QByteArray data    = socket->readLine();
-                    QJsonDocument json = QJsonDocument::fromJson(data);
-                    if (json.isObject())
-                    {
-                        if (json["command"].isString() && json["index"].isDouble() && json["data"].isObject())
-                        {
-                            uint64_t index = json["index"].toDouble();
-                            if (json["command"] == "add")
-                            {
-                                qDebug() << "socket" << socket->socketDescriptor() << "added row" << index;
-                                addData(index, json["data"].toObject());
-                            }
-                            if (json["command"] == "modify")
-                            {
-                                qDebug() << "socket" << socket->socketDescriptor() << "modified row" << index;
-                                modifyData(index, json["data"].toObject());
-                            }
-                            if (json["command"] == "remove")
-                            {
-                                qDebug() << "socket" << socket->socketDescriptor() << "removed row" << index;
-                                removeData(index);
-                            }
-                            if (json["command"] == "sync")
-                            {
-                                qDebug() << "socket" << socket->socketDescriptor() << "requested sync";
-                                syncSocket(socket);
-                            }
-                        }
-                    }
+                    QByteArray data = socket->readLine();
+                    JSONProtocol jsonProtocol(data);
+                    if (jsonProtocol.getCommand() == "add")
+                        addRow();
+                    if (jsonProtocol.getCommand() == "modify")
+                        modifyRow(jsonProtocol.getUUID(), jsonProtocol.getData());
+                    if (jsonProtocol.getCommand() == "remove")
+                        removeRow(jsonProtocol.getUUID());
+                    if (jsonProtocol.getCommand() == "sync")
+                        syncSocket(socket);
                 }
             });
     connect(socket,
@@ -85,73 +69,69 @@ void Server::serverNewConnection()
             });
 }
 
-void Server::addData(int index, const QJsonObject &data)
+void Server::addRow()
 {
     std::lock_guard<std::mutex> lock(mutex);
-    if (index == 0)
-        container.push_front(Person(data.toVariantMap()));
-    else
-        container.push_back(Person(data.toVariantMap()));
-
-    writeToAllSockets("add", index, data);
+    Person *person = new Person();
+    // сервер задает uuid для элемента контейнера
+    QString uuid = QUuid::createUuid().toString();
+    container.insert(uuid, person);
+    localDBModifyRow(uuid, QVariantHash());
+    writeToAllSockets(JSONProtocol::createAddRowWithDataMessage(uuid, QVariantHash()));
 }
 
-void Server::modifyData(int index, const QJsonObject &data)
+void Server::modifyRow(const QString &uuid, const QVariantHash &value)
 {
     std::lock_guard<std::mutex> lock(mutex);
-    container[index].modify(data.toVariantMap());
-
-    writeToAllSockets("modify", index, data);
+    container.value(uuid)->modify(value);
+    localDBModifyRow(uuid, value);
+    writeToAllSockets(JSONProtocol::createModifyRowMessage(uuid, value));
 }
 
-void Server::removeData(int index)
+void Server::removeRow(const QString &uuid)
 {
     std::lock_guard<std::mutex> lock(mutex);
-    if (index <= container.size() && index >= 0)
-        container.remove(index);
-    else
-        return;
-
-    // write to all sockets json to remove index
-    for (auto it = connectedSockets.cbegin(); it != connectedSockets.cend(); ++it)
-    {
-        QJsonDocument json;
-        QJsonObject jsonObject;
-        jsonObject["command"] = "remove";
-        jsonObject["index"]   = QJsonValue(index);
-        jsonObject["data"]    = QJsonObject();
-        json.setObject(jsonObject);
-        it->second->write(json.toJson(QJsonDocument::Compact) + "\n");
-    }
+    container.remove(uuid);
+    localDBRemoveRow(uuid);
+    writeToAllSockets(JSONProtocol::createRemoveRowMessage(uuid));
 }
 
 void Server::syncSocket(QTcpSocket *socket)
 {
     std::lock_guard<std::mutex> lock(mutex);
-    int i = 0;
     for (auto it = container.cbegin(); it != container.cend(); ++it)
-    {
-        QJsonDocument json;
-        QJsonObject jsonObject;
-        jsonObject["command"] = "add";
-        jsonObject["index"]   = QJsonValue(i);
-        jsonObject["data"]    = QJsonObject::fromVariantMap(container.at(i).toVariantMap());
-        json.setObject(jsonObject);
-        socket->write(json.toJson(QJsonDocument::Compact) + "\n");
-        i++;
-    }
+        socket->write(JSONProtocol::createAddRowWithDataMessage(it.key(), it.value()->toVariantHash()));
 }
 
-void Server::writeToAllSockets(const QString &command, int index, const QJsonObject &data)
+void Server::writeToAllSockets(const QByteArray &data)
 {
     for (auto it = connectedSockets.cbegin(); it != connectedSockets.cend(); ++it)
-    {
-        QJsonDocument json;
-        QJsonObject jsonObject;
-        jsonObject["command"] = command;
-        jsonObject["index"]   = QJsonValue(index);
-        jsonObject["data"]    = data;
-        json.setObject(jsonObject);
-        it->second->write(json.toJson(QJsonDocument::Compact) + "\n");
-    }
+        it->second->write(data);
+}
+
+Person *Server::readFromLocalDB(const QString &uuid)
+{
+    localDB->beginGroup(uuid);
+    Person *person = new Person;
+    for (QString fieldName : Person::columns)
+        person->setValueByName(fieldName, localDB->value(fieldName).toString());
+    localDB->endGroup();
+    return person;
+}
+
+void Server::localDBModifyRow(const QString &uuid, const QVariantHash &value)
+{
+    localDB->beginGroup(uuid);
+    for (auto it = value.cbegin(); it != value.end(); ++it)
+        localDB->setValue(it.key(), it.value());
+    localDB->endGroup();
+    localDB->sync();
+}
+
+void Server::localDBRemoveRow(const QString &uuid)
+{
+    localDB->beginGroup(uuid);
+    localDB->remove("");
+    localDB->endGroup();
+    localDB->sync();
 }

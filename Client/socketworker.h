@@ -2,13 +2,12 @@
 #define SOCKETWORKER_H
 
 #include <QHostAddress>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QMetaEnum>
 #include <QTcpSocket>
 #include <QTimer>
 
-#include "../Common/Person.h"
+#include "JSONProtocol.h"
+#include "Person.h"
 #include "addressbookmodel.h"
 
 class SocketWorker : public QObject
@@ -19,10 +18,11 @@ public:
 
 public slots:
     void addressOrPortChanged(const QString &address, const QString &port);
+
     void socketSync();
-    void socketModifyRow(int row, int column, const QVariant &value);
-    void socketAddRow(int row);
-    void socketRemoveRow(int row);
+    void socketModifyRow(const QString &uuid, int column, const QVariant &value);
+    void socketAddRow();
+    void socketRemoveRow(const QString &uuid);
 
 signals:
     void socketStatusChanged(const QString &status);
@@ -30,15 +30,15 @@ signals:
     void errorHappened(const QString &error);
 
     void modelClear();
-    void modelAddRow(int index, const Person &person);
-    void modelModifyRow(int index, const QVariantMap &person);
-    void modelRemoveRow(int index);
+    void modelAddRow(const QString &uuid, const QVariantHash &value);
+    void modelModifyRow(const QString &uuid, const QVariantHash &value);
+    void modelRemoveRow(const QString &uuid);
 
 private slots:
     void socketSpeedTimerTimeout();
     void socketStateChanged(QAbstractSocket::SocketState state);
     void socketReadyRead();
-    void writeToSocket(const QJsonDocument &json);
+    void writeToSocket(const QByteArray &data);
 
 private:
     QTcpSocket socket;

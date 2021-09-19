@@ -12,3 +12,5 @@ SOURCES += \
 
 HEADERS += \
     server.h
+
+include(../Common/Common.pri)

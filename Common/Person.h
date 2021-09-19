@@ -1,8 +1,8 @@
 #ifndef PERSON_H
 #define PERSON_H
 
-#include <QVariantMap>
 #include <QDataStream>
+#include <QVariantMap>
 
 struct Person
 {
@@ -11,53 +11,27 @@ struct Person
         Male,
         Female
     };
-    inline static const QVector<QString> columns =  {"surname", "name", "patronymic", "sex", "phone"};
+    inline static const QVector<QString> columns = {"surname", "name", "patronymic", "sex", "phone"};
 
     Person() = default;
     Person(const QString &surname, const QString &name, const QString &patronymic, const Sex &sex, const QString &phone)
     : surname(surname), name(name), patronymic(patronymic), sex(sex), phone(phone)
     {
     }
-    Person(const QVariantMap &data)
+    Person(const QVariantHash &data)
     {
         modify(data);
     }
 
-    const QVariantMap toVariantMap() const
+    const QVariantHash toVariantHash() const
     {
         return {{"surname", surname}, {"name", name}, {"patronymic", patronymic}, {"sex", static_cast<uint>(sex)}, {"phone", phone}};
     }
 
-    void modify(const QVariantMap &data)
+    void modify(const QVariantHash &data)
     {
         for (auto it = data.cbegin(); it != data.end(); ++it)
             setValueByName(it.key(), it.value());
-    }
-    static int fieldNameToColumnIndex(const QString &field)
-    {
-        if (field == "surname")
-            return 0;
-        if (field == "name")
-            return 1;
-        if (field == "patronymic")
-            return 2;
-        if (field == "sex")
-            return 3;
-        if (field == "phone")
-            return 4;
-        return -1;
-    }
-    static QString columnIndexToFieldName(int column)
-    {
-        switch (column)
-        {
-            case 0:return "surname";
-            case 1:return "name";
-            case 2:return "patronymic";
-            case 3:return "sex";
-            case 4:return "phone";
-            default:return QString();
-        }
     }
     void setValueByName(const QString &field, const QVariant &value)
     {
@@ -76,27 +50,51 @@ struct Person
     {
         switch (index)
         {
-        case 0: surname = value.toString();
-            break;
-        case 1: name = value.toString();
-            break;
-        case 2: patronymic = value.toString();
-            break;
-        case 3: sex = static_cast<Sex>(value.toUInt());
-            break;
-        case 4: phone = value.toString();
-            break;
+            case 0:
+                surname = value.toString();
+                break;
+            case 1:
+                name = value.toString();
+                break;
+            case 2:
+                patronymic = value.toString();
+                break;
+            case 3:
+                sex = static_cast<Sex>(value.toUInt());
+                break;
+            case 4:
+                phone = value.toString();
+                break;
         }
     }
-    const QVariant getValueByColumnIndex(int column) const
+    const QVariant getValueByName(const QString &field)
+    {
+        if (field == "surname")
+            return surname;
+        if (field == "name")
+            return name;
+        if (field == "patronymic")
+            return patronymic;
+        if (field == "sex")
+            return static_cast<uint>(sex);
+        if (field == "phone")
+            return phone;
+        return QVariant();
+    }
+    const QVariant getValueByColumn(int column) const
     {
         switch (column)
         {
-            case 0: return surname;
-            case 1: return name;
-            case 2: return patronymic;
-            case 3: return static_cast<uint>(sex);
-            case 4: return phone;
+            case 0:
+                return surname;
+            case 1:
+                return name;
+            case 2:
+                return patronymic;
+            case 3:
+                return static_cast<uint>(sex);
+            case 4:
+                return phone;
         }
         return QVariant();
     }
@@ -104,7 +102,7 @@ struct Person
     QString surname    = "";
     QString name       = "";
     QString patronymic = "";
-    Sex sex        = Sex::Male;
+    Sex sex            = Sex::Male;
     QString phone      = "";
 };
 

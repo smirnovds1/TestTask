@@ -28,8 +28,7 @@ protected:
     void keyPressEvent(QKeyEvent *event) override;
 
 private slots:
-    void pushBackRow();
-    void pushFrontRow();
+    void addRow();
     void deleteCurrentRow();
     void sync();
     void showSettings();

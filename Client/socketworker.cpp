@@ -11,40 +11,19 @@ SocketWorker::SocketWorker(QObject *parent) : QObject(parent)
     socketSpeedTimer.start(1000);
 }
 
-void SocketWorker::socketModifyRow(int row, int column, const QVariant &value)
+void SocketWorker::socketModifyRow(const QString &uuid, int column, const QVariant &value)
 {
-    QJsonDocument json;
-    QJsonObject jsonObject;
-    jsonObject["command"] = "modify";
-    jsonObject["index"]   = row;
-    QJsonObject dataObject;
-    QString fieldName     = Person::columnIndexToFieldName(column);
-    dataObject[fieldName] = QJsonValue::fromVariant(value);
-    jsonObject["data"]    = dataObject;
-    json.setObject(jsonObject);
-    writeToSocket(json);
+    writeToSocket(JSONProtocol::createModifyRowMessage(uuid, QVariantHash({{Person::columns[column], value}})));
 }
 
-void SocketWorker::socketAddRow(int row)
+void SocketWorker::socketAddRow()
 {
-    QJsonDocument json;
-    QJsonObject jsonObject;
-    jsonObject["command"] = "add";
-    jsonObject["index"]   = row;
-    jsonObject["data"]    = QJsonObject();
-    json.setObject(jsonObject);
-    writeToSocket(json);
+    writeToSocket(JSONProtocol::createAddRowMessage());
 }
 
-void SocketWorker::socketRemoveRow(int row)
+void SocketWorker::socketRemoveRow(const QString &uuid)
 {
-    QJsonDocument json;
-    QJsonObject jsonObject;
-    jsonObject["command"] = "remove";
-    jsonObject["index"]   = row;
-    jsonObject["data"]    = QJsonObject();
-    json.setObject(jsonObject);
-    writeToSocket(json);
+    writeToSocket(JSONProtocol::createRemoveRowMessage(uuid));
 }
 
 void SocketWorker::addressOrPortChanged(const QString &address, const QString &port)
@@ -57,21 +36,13 @@ void SocketWorker::addressOrPortChanged(const QString &address, const QString &p
 void SocketWorker::socketSync()
 {
     emit modelClear();
-
-    QJsonDocument json;
-    QJsonObject jsonObject;
-    jsonObject["command"] = "sync";
-    jsonObject["index"]   = -1;
-    jsonObject["data"]    = QJsonObject();
-    json.setObject(jsonObject);
-    writeToSocket(json);
+    writeToSocket(JSONProtocol::createSyncMessage());
 }
 
-void SocketWorker::writeToSocket(const QJsonDocument &json)
+void SocketWorker::writeToSocket(const QByteArray &data)
 {
     if (socket.isWritable())
     {
-        QByteArray data     = json.toJson(QJsonDocument::Compact) + "\n";
         qint64 bytesWritten = socket.write(data);
         socketBytesSent += bytesWritten;
         if (bytesWritten != data.size())
@@ -116,20 +87,12 @@ void SocketWorker::socketReadyRead()
     {
         QByteArray data = socket.readLine();
         socketBytesReceived += data.size();
-        QJsonDocument json = QJsonDocument::fromJson(data);
-        // if root is not object = reject
-        if (json.isObject())
-        {
-            // general check
-            if (json["command"].isString() && json["index"].isDouble() && json["data"].isObject())
-            {
-                if (json["command"] == "add")
-                    emit modelAddRow(json["index"].toInt(), Person(json["data"].toObject().toVariantMap()));
-                if (json["command"] == "modify")
-                    emit modelModifyRow(json["index"].toInt(), json["data"].toObject().toVariantMap());
-                if (json["command"] == "remove")
-                    emit modelRemoveRow(json["index"].toInt());
-            }
-        }
+        JSONProtocol jsonProtocol(data);
+        if (jsonProtocol.getCommand() == "add")
+            emit modelAddRow(jsonProtocol.getUUID(), jsonProtocol.getData());
+        if (jsonProtocol.getCommand() == "modify")
+            emit modelModifyRow(jsonProtocol.getUUID(), jsonProtocol.getData());
+        if (jsonProtocol.getCommand() == "remove")
+            emit modelRemoveRow(jsonProtocol.getUUID());
     }
 }

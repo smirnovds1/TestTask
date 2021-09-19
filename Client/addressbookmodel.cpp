@@ -12,7 +12,7 @@ QVariant AddressBookModel::headerData(int section, Qt::Orientation orientation, 
     if (role != Qt::DisplayRole)
         return QVariant();
     if (orientation == Qt::Horizontal)
-        return Person::columnIndexToFieldName(section);
+        return Person::columns[section];
     if (orientation == Qt::Vertical)
         return section;
     return QVariant();
@@ -41,8 +41,8 @@ QVariant AddressBookModel::data(const QModelIndex &index, int role) const
 
     if (role == Qt::DisplayRole)
     {
-        const Person &person = container.at(index.row());
-        return person.getValueByColumnIndex(index.column());
+        Person *person = container.value(containerIndex.value(index.row()));
+        return person->getValueByColumn(index.column());
     }
     return QVariant();
 }
@@ -53,7 +53,7 @@ bool AddressBookModel::setData(const QModelIndex &index, const QVariant &value, 
     {
         if (data(index, role) != value)
         {
-            emit socketModifyRow(index.row(), index.column(), value);
+            emit socketModifyRow(containerIndex.value(index.row()), index.column(), value);
             return true;
         }
     }
@@ -79,7 +79,7 @@ bool AddressBookModel::removeRows(int row, int count, const QModelIndex &parent)
 {
     Q_UNUSED(parent)
     for (int i = 0; i < count; ++i)
-        emit socketRemoveRow(row + i);
+        emit socketRemoveRow(containerIndex.value(row + i));
     return true;
 }
 
@@ -87,30 +87,41 @@ void AddressBookModel::modelClear()
 {
     beginResetModel();
     container.clear();
+    containerIndex.clear();
     endResetModel();
 }
 
-void AddressBookModel::modelAddRow(int index, const Person &person)
+void AddressBookModel::modelAddRow(const QString &uuid, const QVariantHash &value)
 {
+    containerIndex.append(uuid);
+    const int index = containerIndex.indexOf(uuid);
+    Person *person  = new Person(value);
     beginInsertRows(QModelIndex(), index, index);
-    container.push_back(person);
+    container.insert(uuid, person);
     endInsertRows();
 }
 
-void AddressBookModel::modelModifyRow(int index, const QVariantMap &value)
+void AddressBookModel::modelModifyRow(const QString &uuid, const QVariantHash &value)
 {
-    for (int i = 0; i < Person::columns.size(); ++i)
-        if (container[index].getValueByColumnIndex(i) != value.value(Person::columns[i]))
+    const int row  = containerIndex.indexOf(uuid);
+    Person *person = container.value(uuid);
+    for (auto it = value.cbegin(); it != value.cend(); ++it)
+    {
+        const int column = Person::columns.indexOf(it.key());
+        if (person->getValueByColumn(column) != it.value())
         {
-            container[index].setValueByColumn(i, value.value(Person::columns[i]));
-            QModelIndex modelIndex = createIndex(index, i);
+            person->setValueByColumn(column, it.value());
+            QModelIndex modelIndex = createIndex(row, column);
             emit dataChanged(modelIndex, modelIndex, {Qt::DisplayRole});
         }
+    }
 }
 
-void AddressBookModel::modelRemoveRow(int index)
+void AddressBookModel::modelRemoveRow(const QString &uuid)
 {
+    const int index = containerIndex.indexOf(uuid);
     beginRemoveRows(QModelIndex(), index, index);
-    container.removeAt(index);
+    delete container.take(uuid);
+    containerIndex.removeAll(uuid);
     endRemoveRows();
 }
