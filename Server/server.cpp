@@ -6,10 +6,10 @@ Server::Server(quint16 port)
     localDB = new QSettings("server.ini", QSettings::IniFormat, this);
     for (QString uuid : localDB->childGroups())
         container.insert(uuid, readFromLocalDB(uuid));
-    //    QFile file("server.db");
-    //    file.open(QFile::ReadWrite);
-    //    QDataStream dataStream(&file);
-    //    dataStream >> container;
+    if (localDB->status() == QSettings::NoError)
+        qDebug() << "Server successfully opened server.ini file";
+    else
+        qFatal("Server can't open server.ini file");
 
     // open up server
     if (server.listen(QHostAddress::Any, port))
@@ -19,16 +19,9 @@ Server::Server(quint16 port)
     connect(&server, &QTcpServer::newConnection, this, &Server::serverNewConnection);
 }
 
-#include <iostream>
 Server::~Server()
 {
     qDebug() << __PRETTY_FUNCTION__;
-    std::lock_guard<std::mutex> lock(mutex);
-    //    QFile file("server.db");
-    //    file.open(QFile::WriteOnly);
-    //    QDataStream dataStream(&file);
-    //    dataStream << container;
-    //    file.close();
 }
 
 void Server::serverNewConnection()
@@ -116,6 +109,8 @@ Person *Server::readFromLocalDB(const QString &uuid)
     for (QString fieldName : Person::columns)
         person->setValueByName(fieldName, localDB->value(fieldName).toString());
     localDB->endGroup();
+    if (localDB->status() != QSettings::NoError)
+        qDebug() << __PRETTY_FUNCTION__ << "Error occured while reading from server.ini file";
     return person;
 }
 
@@ -126,6 +121,8 @@ void Server::localDBModifyRow(const QString &uuid, const QVariantHash &value)
         localDB->setValue(it.key(), it.value());
     localDB->endGroup();
     localDB->sync();
+    if (localDB->status() != QSettings::NoError)
+        qDebug() << __PRETTY_FUNCTION__ << "Error occured while writing to server.ini file";
 }
 
 void Server::localDBRemoveRow(const QString &uuid)
@@ -134,4 +131,6 @@ void Server::localDBRemoveRow(const QString &uuid)
     localDB->remove("");
     localDB->endGroup();
     localDB->sync();
+    if (localDB->status() != QSettings::NoError)
+        qDebug() << __PRETTY_FUNCTION__ << "Error occured while writing to server.ini file";
 }
