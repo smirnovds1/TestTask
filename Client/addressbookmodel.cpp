@@ -103,7 +103,10 @@ void AddressBookModel::modelAddRow(const QString &uuid, const QVariantHash &valu
 
 void AddressBookModel::modelModifyRow(const QString &uuid, const QVariantHash &value)
 {
-    const int row  = containerIndex.indexOf(uuid);
+    const int row = containerIndex.indexOf(uuid);
+    // проверка на валидность
+    if (row < 0)
+        return;
     Person *person = container.value(uuid);
     for (auto it = value.cbegin(); it != value.cend(); ++it)
     {
@@ -119,8 +122,11 @@ void AddressBookModel::modelModifyRow(const QString &uuid, const QVariantHash &v
 
 void AddressBookModel::modelRemoveRow(const QString &uuid)
 {
-    const int index = containerIndex.indexOf(uuid);
-    beginRemoveRows(QModelIndex(), index, index);
+    const int row = containerIndex.indexOf(uuid);
+    // проверка на валидность
+    if (row < 0)
+        return;
+    beginRemoveRows(QModelIndex(), row, row);
     delete container.take(uuid);
     containerIndex.removeAll(uuid);
     endRemoveRows();
